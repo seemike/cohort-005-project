@@ -3,6 +3,17 @@ import type { Route } from "./+types/layout.app";
 import { Sidebar } from "~/components/sidebar";
 import { DevUI } from "~/components/dev-ui";
 import { Toaster } from "sonner";
+import { getPrototypeNotifications } from "~/lib/notifications.prototype.server";
+import {
+  ProtoProvider,
+  useVariant,
+  BellDropdown,
+  InboxNavItem,
+  useNavBadges,
+  useCourseBadges,
+  useMainOverride,
+  NotificationsSwitcher,
+} from "~/components/notifications.prototype";
 import { getCurrentUserId, getDevCountry } from "~/lib/session";
 import { getCountryTierInfo, COUNTRIES } from "~/lib/ppp";
 import { eq, and, or, sql, desc } from "drizzle-orm";
@@ -213,10 +224,31 @@ export async function loader({ request }: Route.LoaderArgs) {
     countryTierInfo,
     countries: COUNTRIES,
     isTeamAdmin: currentUserId ? isTeamAdmin(currentUserId) : false,
+    prototypeNotifications: getPrototypeNotifications(
+      currentUser?.id ?? null,
+      currentUser?.role ?? null
+    ),
   };
 }
 
-export default function AppLayout({ loaderData }: Route.ComponentProps) {
+// PROTOTYPE wrapper for the Notifications variants (#4). Drop with the prototype.
+export default function AppLayout(props: Route.ComponentProps) {
+  return (
+    <ProtoProvider
+      seed={props.loaderData.prototypeNotifications}
+      role={props.loaderData.currentUser?.role ?? null}
+    >
+      <AppLayoutInner {...props} />
+      <NotificationsSwitcher />
+    </ProtoProvider>
+  );
+}
+
+function AppLayoutInner({ loaderData }: Route.ComponentProps) {
+  const variant = useVariant();
+  const navBadges = useNavBadges();
+  const courseBadges = useCourseBadges();
+  const main = useMainOverride();
   const {
     users,
     currentUser,
@@ -233,9 +265,14 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
         currentUser={currentUser}
         recentCourses={recentCourses}
         isTeamAdmin={userIsTeamAdmin}
+        headerSlot={variant === "A" ? <BellDropdown /> : null}
+        navSlot={variant === "B" ? <InboxNavItem /> : null}
+        navBadges={variant === "D" ? navBadges : {}}
+        courseBadges={variant === "D" ? courseBadges : {}}
       />
       <main className="flex-1 overflow-y-auto">
-        <Outlet />
+        {main.above}
+        {main.replace ?? <Outlet />}
       </main>
       <DevUI
         users={users}

@@ -41,6 +41,11 @@ interface SidebarProps {
   currentUser: CurrentUser | null;
   recentCourses?: RecentCourse[];
   isTeamAdmin?: boolean;
+  // PROTOTYPE slots for the Notifications variants (#4). Drop with the prototype.
+  headerSlot?: React.ReactNode;
+  navSlot?: React.ReactNode;
+  navBadges?: Record<string, React.ReactNode>;
+  courseBadges?: Record<number, React.ReactNode>;
 }
 
 interface NavItem {
@@ -117,6 +122,10 @@ export function Sidebar({
   currentUser,
   recentCourses = [],
   isTeamAdmin = false,
+  headerSlot,
+  navSlot,
+  navBadges = {},
+  courseBadges = {},
 }: SidebarProps) {
   const currentUserRole = currentUser?.role ?? null;
   const [isDark, setIsDark] = useState(false);
@@ -140,6 +149,7 @@ export function Sidebar({
         <NavLink to="/" className="text-lg font-bold tracking-tight">
           Cadence
         </NavLink>
+        {headerSlot}
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
@@ -160,8 +170,10 @@ export function Sidebar({
             >
               {item.icon}
               {item.label}
+              {navBadges[item.to]}
             </NavLink>
           ))}
+        {navSlot}
         {isTeamAdmin && (
           <NavLink
             to="/team"
@@ -199,8 +211,11 @@ export function Sidebar({
                   )
                 }
               >
-                <div className="truncate text-sm font-medium">
-                  {course.title}
+                <div className="flex items-center gap-2">
+                  <div className="truncate text-sm font-medium">
+                    {course.title}
+                  </div>
+                  {courseBadges[course.courseId]}
                 </div>
                 <div className="mt-1 flex items-center gap-2">
                   <div className="h-1.5 flex-1 rounded-full bg-sidebar-accent">
