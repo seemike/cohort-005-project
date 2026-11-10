@@ -3,7 +3,7 @@ import * as schema from "~/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 import { courses, lessons, modules, notes } from "~/db/schema";
 import { savedLessonColumns } from "~/lib/saved-lesson.server";
-import { MAX_NOTE_LENGTH } from "~/lib/notes";
+import { MAX_NOTE_LENGTH, NOTE_TOO_LONG_MESSAGE } from "~/lib/notes";
 
 // ─── Notes ───
 // A Student's own writing about a Lesson, private to the Student who wrote it.
@@ -33,11 +33,14 @@ export function getNote(
     .get();
 }
 
-export type SaveNoteResult = { ok: true; note: Note } | { ok: false; error: string };
+export type SaveNoteResult =
+  | { ok: true; note: Note | null }
+  | { ok: false; error: string };
 
 /**
  * Writes the Student's Note on the Lesson. Saving again replaces the body and
- * moves `updatedAt` on; `createdAt` stays where it was.
+ * moves `updatedAt` on; `createdAt` stays where it was. Saving an empty body
+ * deletes the Note, so clearing the note box leaves the Student with none.
  */
 export function saveNote(
   db: Db,
@@ -47,14 +50,14 @@ export function saveNote(
   now: Date
 ): SaveNoteResult {
   const trimmed = body.trim();
-  if (trimmed.length === 0) {
-    return { ok: false, error: "Write something before saving your note" };
-  }
   if (trimmed.length > MAX_NOTE_LENGTH) {
-    return {
-      ok: false,
-      error: `Note must be ${MAX_NOTE_LENGTH} characters or fewer`,
-    };
+    return { ok: false, error: NOTE_TOO_LONG_MESSAGE };
+  }
+  if (trimmed.length === 0) {
+    db.delete(notes)
+      .where(and(eq(notes.userId, studentId), eq(notes.lessonId, lessonId)))
+      .run();
+    return { ok: true, note: null };
   }
 
   const at = now.toISOString();
