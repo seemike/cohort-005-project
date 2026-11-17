@@ -99,3 +99,15 @@ describe("describeNoteDraft", () => {
     expect(result.status).toEqual({ kind: "too-long" });
   });
 });
+
+describe("describeNoteDraft length", () => {
+  it("can save a Note at the limit followed by whitespace, as the server trims it", () => {
+    const result = describeNoteDraft({
+      ...base,
+      draft: "a".repeat(MAX_NOTE_LENGTH) + "\n\n\n",
+    });
+    expect(result.tooLong).toBe(false);
+    expect(result.canSave).toBe(true);
+    expect(result.status).toEqual({ kind: "unsaved" });
+  });
+});

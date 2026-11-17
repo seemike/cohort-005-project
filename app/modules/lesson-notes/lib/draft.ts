@@ -27,10 +27,12 @@ export type NoteDraft = {
 
 export function describeDraft(input: NoteDraftInput): NoteDraft {
   const length = input.draft.length;
-  const tooLong = length > MAX_NOTE_LENGTH;
-  const blank = input.draft.trim().length === 0;
-  // The server trims before it stores, so trailing whitespace is not a change.
-  const changed = input.draft.trim() !== input.saved;
+  // The server trims before it checks the length and stores, so surrounding
+  // whitespace neither counts against the limit nor counts as a change.
+  const trimmed = input.draft.trim();
+  const tooLong = trimmed.length > MAX_NOTE_LENGTH;
+  const blank = trimmed.length === 0;
+  const changed = trimmed !== input.saved;
 
   return {
     status: statusOf(input, { tooLong, blank, changed }),
